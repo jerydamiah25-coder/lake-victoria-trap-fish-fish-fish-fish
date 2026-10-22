@@ -1,0 +1,1057 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Interactive Lake Victoria simulation of an AI-camera balloon trap that catches invasive Nile perch with frozen tilapia bait and lets native cichlids swim free. Includes fish breeding seasons and population graphs.">
+<meta name="keywords" content="Lake Victoria, Nile perch, invasive species, cichlids, fish trap, AI camera, simulation, Nile tilapia, ningu, ngege">
+<meta name="robots" content="index, follow">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Lake Victoria Balloon Trap">
+<meta property="og:description" content="Watch an AI-camera balloon trap remove invasive Nile perch while native cichlids swim through. An interactive Lake Victoria simulation.">
+<meta name="twitter:card" content="summary">
+<style>
+body { margin: 0; }
+[hidden] { display: none !important; }
+img { max-width: 100%; }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+</style>
+<title>Lake Victoria Balloon Trap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: lake stage + process strip + population chart on the left, a control/readout rail on the right; stacks on phones. */
+:root {
+  --bg: #eaefe8;
+  --surface: #f9fbf6;
+  --ink: #16241f;
+  --muted: #56675f;
+  --line: #d1dacd;
+  --lake: #1d6b66;
+  --balloon: #d24f8a;
+  --invasive: #b9452a;
+  --native: #1d8256;
+  --gold: #b88a0c;
+  --font-display: 'Bricolage Grotesque', 'Avenir Next', system-ui, sans-serif;
+  --font-body: 'Atkinson Hyperlegible', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1615; --surface: #14211f; --ink: #e2ebe5; --muted: #91a49a; --line: #263731;
+    --lake: #45aaa0; --balloon: #f07fb0; --invasive: #ee7c57; --native: #4cc48b; --gold: #e6bd3e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1615; --surface: #14211f; --ink: #e2ebe5; --muted: #91a49a; --line: #263731;
+  --lake: #45aaa0; --balloon: #f07fb0; --invasive: #ee7c57; --native: #4cc48b; --gold: #e6bd3e;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+}
+.wrap {
+  max-width: 1260px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+  display: grid; gap: 22px;
+}
+header { display: grid; gap: 6px; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--lake); }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(28px, 4.4vw, 46px); line-height: 1.02; margin: 0; letter-spacing: -.02em; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--balloon); }
+.lede { margin: 0; color: var(--muted); max-width: 68ch; }
+h2 { font-family: var(--font-display); font-weight: 800; font-size: 17px; margin: 0; letter-spacing: -.01em; }
+
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 22px; align-items: start; }
+@media (max-width: 960px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.col { display: grid; gap: 18px; min-width: 0; }
+
+.stage { position: relative; border-radius: 14px; overflow: hidden; background: #0b2a2a; box-shadow: 0 1px 0 var(--line), 0 18px 40px -24px rgba(10, 40, 40, .55); }
+#lake { display: block; width: 100%; aspect-ratio: 1000 / 560; cursor: crosshair; touch-action: pan-y; }
+.tip {
+  position: absolute; pointer-events: none; z-index: 2;
+  background: rgba(10, 22, 21, .92); color: #eef4ef; border-radius: 8px; padding: 7px 10px;
+  font-size: 12.5px; line-height: 1.35; max-width: 220px; transform: translate(12px, -110%);
+}
+.tip b { display: block; font-size: 13.5px; }
+.tip i { color: #b7c9c0; }
+.tip .tag { display: inline-block; margin-top: 4px; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; }
+.tag.inv { background: #c2502e; color: #fff; }
+.tag.nat { background: #23925f; color: #fff; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.hint { font-size: 12.5px; color: var(--muted); margin: 0; }
+
+/* process strip */
+.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; counter-reset: s; }
+@media (max-width: 720px) { .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.steps li { counter-increment: s; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 3px; transition: border-color .2s, background .2s; min-width: 0; }
+.steps li::before { content: counter(s); font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.steps li b { font-size: 13.5px; line-height: 1.25; }
+.steps li span { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+.steps li.on { border-color: var(--balloon); background: color-mix(in srgb, var(--balloon) 10%, transparent); }
+.steps li.on::before { color: var(--balloon); content: counter(s) " · now"; }
+.steps li.inv.on { border-color: var(--invasive); background: color-mix(in srgb, var(--invasive) 10%, transparent); }
+.steps li.inv.on::before { color: var(--invasive); }
+.steps li.nat.on { border-color: var(--native); background: color-mix(in srgb, var(--native) 10%, transparent); }
+.steps li.nat.on::before { color: var(--native); }
+.status { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+
+/* chart */
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+#chart { display: block; width: 100%; height: 240px; }
+
+/* controls */
+.row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.btns { display: flex; gap: 8px; flex-wrap: wrap; }
+button {
+  font: inherit; font-size: 13.5px; font-weight: 700; color: var(--ink); background: transparent;
+  border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; cursor: pointer;
+}
+button:hover { border-color: var(--muted); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--balloon); outline-offset: 2px; }
+button.primary { background: var(--ink); color: var(--surface); border-color: var(--ink); min-width: 84px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; padding: 6px 10px; font-family: var(--font-mono); font-weight: 600; font-size: 12px; }
+.seg button[aria-pressed="true"] { background: var(--lake); color: #fff; }
+label.check { display: flex; align-items: center; gap: 9px; font-size: 14px; cursor: pointer; }
+label.check input { width: 17px; height: 17px; accent-color: var(--balloon); margin: 0; }
+.slider { display: grid; gap: 4px; }
+.slider .row span { font-size: 14px; }
+.slider output { font-family: var(--font-mono); font-weight: 600; font-variant-numeric: tabular-nums; }
+input[type="range"] { width: 100%; accent-color: var(--balloon); margin: 0; }
+hr { border: 0; border-top: 1px solid var(--line); margin: 2px 0; width: 100%; }
+
+/* readouts */
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.tile { background: var(--surface); padding: 10px 12px; display: grid; gap: 1px; }
+.tile small { font-size: 11.5px; color: var(--muted); letter-spacing: .02em; }
+.tile strong { font-family: var(--font-mono); font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.tile strong.inv { color: var(--invasive); }
+.tile strong.nat { color: var(--native); }
+
+.matrix { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.matrix th, .matrix td { padding: 7px 6px; text-align: left; border-bottom: 1px solid var(--line); }
+.matrix th { font-weight: 400; color: var(--muted); }
+.matrix td { font-family: var(--font-mono); font-size: 15px; font-weight: 600; }
+.matrix td small { display: block; font-family: var(--font-body); font-weight: 400; font-size: 11px; color: var(--muted); }
+.matrix .good { color: var(--native); }
+.matrix .bad { color: var(--invasive); }
+
+.species { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.species li { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; gap: 9px; align-items: center; font-size: 13.5px; }
+.species .dot { width: 12px; height: 12px; border-radius: 50%; }
+.species i { color: var(--muted); font-size: 12px; }
+.species .n { font-family: var(--font-mono); font-weight: 600; font-variant-numeric: tabular-nums; }
+.species .kind { font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; margin-left: 4px; }
+.kind.inv { color: var(--invasive); }
+.kind.nat { color: var(--native); }
+
+.log { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; font-size: 12.5px; max-height: 200px; overflow-y: auto; }
+.log li { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 6px; color: var(--muted); }
+.log li b { color: var(--ink); font-weight: 700; }
+.log time { font-family: var(--font-mono); font-size: 11px; padding-top: 1px; }
+.log .x-inv { color: var(--invasive); }
+.log .x-nat { color: var(--native); }
+.season-bar { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 3px; }
+.season-bar span { font-family: var(--font-mono); font-size: 11px; text-align: center; padding: 4px 0; border-radius: 4px; color: var(--muted); background: color-mix(in srgb, var(--line) 55%, transparent); border: 1px solid transparent; }
+.season-bar .wet { background: color-mix(in srgb, var(--lake) 24%, transparent); color: var(--ink); }
+.season-bar .now { border-color: var(--ink); font-weight: 600; color: var(--ink); }
+.tablewrap { overflow-x: auto; }
+.breed { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 680px; }
+.breed th, .breed td { text-align: left; vertical-align: top; padding: 9px 12px 9px 0; border-bottom: 1px solid var(--line); }
+.breed thead th { font-weight: 400; font-size: 12px; color: var(--muted); }
+.breed tbody th { font-weight: 700; white-space: nowrap; }
+.breed tbody th .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 7px; }
+.breed td small { display: block; color: var(--muted); font-size: 12px; margin-top: 3px; }
+.breed td:nth-child(2) { max-width: 52ch; }
+.breed td.now { font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; min-width: 150px; }
+footer { font-size: 12.5px; color: var(--muted); max-width: 80ch; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Lake Victoria · Nile perch control</div>
+    <h1>A smart <em>balloon trap</em> that only keeps the invaders</h1>
+    <p class="lede">Frozen white Nile tilapia sits inside a clear tube on top of a holding cage, the one bait Nile perch go for. An AI camera names each one. Nile perch get sealed in by pink balloons and pushed down into the cage. Native cichlids swim straight out the other end. Watch what happens to the lake over time, then switch the trap off to compare.</p>
+  </header>
+
+  <div class="grid">
+    <div class="col">
+      <div class="stage">
+        <canvas id="lake" aria-label="Animated cross-section of Lake Victoria showing fish and the balloon trap"></canvas>
+        <div class="tip" id="tip" hidden></div>
+      </div>
+
+      <section class="panel" aria-labelledby="h-steps">
+        <div class="panel-head">
+          <h2 id="h-steps">How the trap works</h2>
+          <span class="status" id="status">Waiting for a fish</span>
+        </div>
+        <ol class="steps" id="steps">
+          <li data-step="enter"><b>Bait draws a fish, balloon deflates</b><span>Frozen white tilapia in the tube pulls Nile perch in. Other fish sometimes follow the light. The bottom balloon shrinks to let it into the tube.</span></li>
+          <li data-step="scan"><b>AI camera identifies it</b><span>The camera reads the fish's shape and colours and names the species.</span></li>
+          <li data-step="trap" class="inv"><b>Invasive: trap and push</b><span>Both gate balloons inflate, the floor balloon opens, and the top balloon pushes the fish into the cage.</span></li>
+          <li data-step="pass" class="nat"><b>Native: swim through</b><span>Gates stay down and the floor balloon stays up, so the fish can't wander into the cage. It exits safely.</span></li>
+        </ol>
+      </section>
+
+    </div>
+
+    <aside class="col">
+      <section class="panel" aria-labelledby="h-ctl">
+        <div class="panel-head"><h2 id="h-ctl">Controls</h2></div>
+        <div class="row">
+          <button class="primary" id="play" type="button">Pause</button>
+          <div class="seg" role="group" aria-label="Simulation speed">
+            <button type="button" data-speed="1" aria-pressed="true">1×</button>
+            <button type="button" data-speed="3" aria-pressed="false">3×</button>
+            <button type="button" data-speed="8" aria-pressed="false">8×</button>
+          </div>
+        </div>
+        <label class="check"><input type="checkbox" id="trapOn" checked> Trap switched on</label>
+        <label class="check"><input type="checkbox" id="tilapia"> Also trap Nile tilapia</label>
+        <label class="check"><input type="checkbox" id="bait" checked> Frozen white tilapia as bait</label>
+        <div class="row"><span class="hint">Bait freshness (thaws over ~30 days)</span><output class="status" id="baitOut">100%</output></div>
+        <label class="check"><input type="checkbox" id="auto" checked> Fisherfolk empty the cage and rebait</label>
+        <div class="slider">
+          <div class="row"><span>AI camera accuracy</span><output id="accOut" for="acc">92%</output></div>
+          <input type="range" id="acc" min="50" max="100" step="1" value="92">
+        </div>
+        <hr>
+        <div class="btns">
+          <button type="button" id="harvest">Empty cage now</button>
+          <button type="button" id="rebait">Load fresh bait</button>
+          <button type="button" id="invade">Release 5 perch</button>
+          <button type="button" id="reset">Restart</button>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="h-now">
+        <div class="panel-head"><h2 id="h-now">Right now</h2><span class="status" id="day">Day 0</span></div>
+        <div class="tiles">
+          <div class="tile"><small>Nile perch in lake</small><strong class="inv" id="tPerch">0</strong></div>
+          <div class="tile"><small>Native fish in lake</small><strong class="nat" id="tNative">0</strong></div>
+          <div class="tile"><small>In the cage</small><strong id="tCage">0/15</strong></div>
+          <div class="tile"><small>Perch harvested</small><strong id="tKg">0 kg</strong></div>
+        </div>
+        <p class="hint" id="eaten">Natives eaten by perch: 0</p>
+      </section>
+
+      <section class="panel" aria-labelledby="h-ai">
+        <div class="panel-head"><h2 id="h-ai">Camera decisions</h2><span class="status" id="precision">—</span></div>
+        <table class="matrix">
+          <thead><tr><th></th><th>Trapped</th><th>Let through</th></tr></thead>
+          <tbody>
+            <tr><th>Target fish</th><td class="good" id="mTP">0<small>correct</small></td><td class="bad" id="mFN">0<small>missed</small></td></tr>
+            <tr><th>Other fish</th><td class="bad" id="mFP">0<small>caught by mistake</small></td><td class="good" id="mTN">0<small>correct</small></td></tr>
+          </tbody>
+        </table>
+        <p class="hint">Native fish caught by mistake are put back in the lake when the cage is emptied.</p>
+      </section>
+
+      <section class="panel" aria-labelledby="h-sp">
+        <div class="panel-head"><h2 id="h-sp">Species</h2><span class="hint">hover a fish to name it</span></div>
+        <ul class="species" id="species"></ul>
+      </section>
+
+      <section class="panel" aria-labelledby="h-log">
+        <div class="panel-head"><h2 id="h-log">Trap log</h2></div>
+        <ul class="log" id="log"></ul>
+      </section>
+    </aside>
+  </div>
+
+  <section class="panel" aria-labelledby="h-breed">
+    <div class="panel-head"><h2 id="h-breed">Breeding patterns</h2><span class="status" id="season">January · dry season</span></div>
+    <div class="season-bar" id="seasonBar" aria-label="Lake Victoria seasons by month"></div>
+    <p class="hint">Shaded months are the rainy seasons: long rains March to May, short rains October to December. Most fish breed more when it rains.</p>
+    <div class="tablewrap"><table class="breed">
+      <thead><tr><th>Species</th><th>How it breeds</th><th>When</th><th>In the lake now</th></tr></thead>
+      <tbody id="breedRows"></tbody>
+    </table></div>
+    <p class="hint">Only grown females breed. Young fish are easy prey, so most don't survive. Brooding mothers show a swollen throat in the lake view, tilapia nests appear on the bottom, and perch eggs drift up as white specks. Growth and clutch sizes are scaled down: a year passes in about 6 minutes at 8×.</p>
+  </section>
+
+  <section class="panel" aria-labelledby="h-chart">
+    <div class="panel-head">
+      <h2 id="h-chart">Nile perch vs. cichlids, by day</h2>
+      <div class="legend">
+        <span><i style="background: var(--invasive)"></i>Nile perch (invasive)</span>
+        <span><i style="background: var(--gold)"></i>Haplochromine cichlids (native)</span>
+        <span><i style="background: color-mix(in srgb, var(--lake) 30%, transparent); height: 10px"></i>Rainy seasons</span>
+      </div>
+    </div>
+    <canvas id="chart" aria-label="Line chart of Nile perch and haplochromine cichlid counts in the lake over simulated days"></canvas>
+    <p class="hint">Nile perch hunt the small cichlids. When perch numbers climb, cichlids fall. With the baited trap on, perch stay low and cichlids recover. Turn the trap or the bait off to see the other path.</p>
+  </section>
+
+  <footer>A teaching model, not a field forecast. Nile perch were introduced to Lake Victoria in the 1950s and helped wipe out hundreds of haplochromine cichlid species. Fish counts, growth and predation rates here are simplified so the effect shows up in a few minutes.</footer>
+</div>
+
+<script>
+(() => {
+const W = 1000, H = 560, SURF = 70, BED = 528, DAY = 8, CAP = 15;
+const TUBE = { x: 330, y: 100, w: 360, h: 62 }, TCY = 131;
+const CAGE = { x: 380, y: 162, w: 260, h: 300 };
+const CAGE_IN = { x: 394, y: 180, w: 232, h: 268 };
+const ENTRY = { x: 306, y: TCY }, SCAN_X = 468, DROP_X = 530, EXIT_X = 714, CAM = { x: 468, y: 30 };
+const OBS = [{ x: 322, y: 40, w: 376, h: 128 }, { x: 376, y: 162, w: 268, h: 306 }];
+
+const SP = {
+  perch:   { name: 'Nile perch', latin: 'Lates niloticus', inv: true, len: [46, 66], speed: 34, h: .3, top: '#56686c', body: '#a7b6b4', belly: '#e4e9e2', fin: '#6b7c7d', eye: '#f0cf4a', r: .0025, K: 30, imm: .05, cmPerPx: 2, dot: '#9fb0ae' },
+  tilapia: { name: 'Nile tilapia', latin: 'Oreochromis niloticus', inv: true, len: [28, 38], speed: 27, h: .43, top: '#4b5948', body: '#86917f', belly: '#cbcfb9', fin: '#a1695a', bars: 'rgba(35,45,35,.3)', eye: '#1b1b1b', r: .014, K: 14, imm: .05, cmPerPx: 1.1, dot: '#86917f' },
+  cichlid: { name: 'Haplochromine cichlid', latin: 'Haplochromis spp.', inv: false, len: [15, 22], speed: 32, h: .38, top: '#2e6db0', body: '#f2c230', belly: '#f8e391', fin: '#e06a2a', bars: 'rgba(25,25,25,.33)', eye: '#111', r: .024, K: 44, imm: .05, dot: '#f2c230' },
+  ngege:   { name: 'Ngege', latin: 'Oreochromis esculentus', inv: false, len: [24, 32], speed: 26, h: .42, top: '#3c482a', body: '#7c8b4a', belly: '#c9ca90', fin: '#556135', eye: '#111', r: .014, K: 20, imm: .03, dot: '#7c8b4a' },
+  ningu:   { name: 'Ningu', latin: 'Labeo victorianus', inv: false, len: [26, 36], speed: 30, h: .26, top: '#47382a', body: '#8c6f4e', belly: '#d7c4a1', fin: '#6b5137', eye: '#111', r: .013, K: 22, imm: .03, dot: '#8c6f4e' },
+};
+const NATIVES = ['cichlid', 'ngege', 'ningu'];
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const LONG_RAINS = m => m >= 2 && m <= 4, SHORT_RAINS = m => m >= 9 && m <= 11, rainy = m => LONG_RAINS(m) || SHORT_RAINS(m);
+// Breeding: rate is the daily chance an adult female (not resting) starts breeding, before season and crowding
+const BREED = {
+  perch: { mode: 'broadcast', fry: 9, mature: 44, grow: .1, rate: .03, rest: 20, clutch: [3, 6], hatch: 4, juvMort: .02, season: m => rainy(m) ? 1.8 : 1,
+    how: 'Open-water spawner. Females scatter millions of tiny floating eggs and leave them. No parental care, so most larvae die, and adult perch eat young perch.',
+    when: 'All year, peaking in both rainy seasons', matures: 'late, at 2–4 years and 50–90 cm' },
+  tilapia: { mode: 'mouth', nest: true, fry: 8, mature: 24, grow: .12, rate: .07, days: 14, rest: 10, clutch: [2, 5], juvMort: .008, season: m => rainy(m) ? 2 : 1,
+    how: 'Males dig a nest pit on the lake bottom. The female scoops up the eggs and carries eggs, then fry, in her mouth for about two weeks.',
+    when: 'Several times a year, peaking in the rains', matures: 'early, within the first year' },
+  cichlid: { mode: 'mouth', fry: 7, mature: 13, grow: .08, rate: .16, days: 18, rest: 6, clutch: [4, 8], juvMort: .004, season: m => rainy(m) ? 1.2 : 1,
+    how: 'Female mouthbrooders. A female carries 10–50 eggs, then the fry, in her mouth for about three weeks before letting them go.',
+    when: 'All year round', matures: 'within a year, at a few cm' },
+  ngege: { mode: 'mouth', fry: 8, mature: 22, grow: .1, rate: .1, days: 20, rest: 10, clutch: [3, 5], juvMort: .004, season: m => rainy(m) ? 1.5 : 1,
+    how: 'Males hold small breeding territories on shallow sandy bottoms. The female broods the eggs and fry in her mouth.',
+    when: 'Most of the year, more in the rains', matures: 'in about a year' },
+  ningu: { mode: 'river', fry: 9, mature: 24, grow: .1, rate: .04, days: 25, rest: 200, clutch: [6, 10], juvMort: .004, season: m => LONG_RAINS(m) ? 1 : 0,
+    how: 'Swims up rivers to spawn on flooded ground, then the young drift back to the lake. Netting these runs at river mouths caused its collapse.',
+    when: 'Once a year, in the long rains (March–May)', matures: 'at 2–3 years' },
+};
+const month = () => Math.floor((day % 360) / 30);
+let nests = [], eggs = [];
+
+const $ = id => document.getElementById(id);
+const R = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const ease = k => k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+const inRect = (r, x, y, m) => x > r.x - m && x < r.x + r.w + m && y > r.y - m && y < r.y + r.h + m;
+
+const opts = { trapOn: true, tilapia: false, auto: true, bait: true, acc: .92 };
+let baitFresh = 1, fish, parts, trap, stats, hist, t, dayAcc, day, uid, birthAcc, harvestTimer;
+let running = true, speed = 1;
+
+const isTarget = sp => sp === 'perch' || (sp === 'tilapia' && opts.tilapia);
+const kgOf = f => { const cm = f.len * SP[f.sp].cmPerPx; return f.sp === 'perch' ? 1.28e-5 * cm ** 3 : 1.7e-5 * cm ** 3; };
+
+function makeFish(sp, x, y, juvenile) {
+  const s = SP[sp], B = BREED[sp], maxLen = R(s.len[0], s.len[1]);
+  return { id: ++uid, sp, x, y, vx: R(-.5, .5) * s.speed, vy: 0, wa: R(0, 6.28), len: juvenile ? B.fry : Math.max(B.mature, maxLen * R(.82, 1)),
+    maxLen, face: 1, tilt: 0, wob: R(0, 6), state: 'free', hunger: R(10, 80), prey: null,
+    female: Math.random() < .5, brood: 0, cool: (day || 0) + R(0, 25) };
+}
+function freePos() {
+  for (let i = 0; i < 60; i++) {
+    const x = R(20, 980), y = R(108, 512);
+    if (!OBS.some(r => inRect(r, x, y, 22))) return [x, y];
+  }
+  return [100, 300];
+}
+function spawn(sp, juvenile) { const [x, y] = freePos(); fish.push(makeFish(sp, x, y, juvenile)); }
+function spawnEdge(sp) {
+  const left = Math.random() < .5, f = makeFish(sp, left ? 6 : 994, R(130, 500), false);
+  f.wa = left ? 0 : Math.PI; f.vx = (left ? 1 : -1) * SP[sp].speed; fish.push(f);
+}
+
+function init() {
+  fish = []; parts = []; uid = 0; baitFresh = 1; t = 0; dayAcc = 0; day = 0; harvestTimer = 0;
+  nests = []; eggs = [];
+  stats = { tp: 0, tn: 0, fp: 0, fn: 0, kg: 0, eaten: 0, cannibal: 0, perchOut: 0 };
+  const start = { perch: 11, tilapia: 5, cichlid: 32, ngege: 10, ningu: 8 };
+  for (const k in start) for (let i = 0; i < start[k]; i++) spawn(k, false);
+  trap = { state: 'idle', fish: null, t: 0, tw: null, flag: false, label: null,
+    inf: { entry: 1, gateL: 0, gateR: 0, bottom: 1, pusher: 0 }, goal: { entry: 1, gateL: 0, gateR: 0, bottom: 1, pusher: 0 } };
+  hist = [];
+  record();
+  logEl.innerHTML = '';
+  log('Trap lowered into the lake. Lure light on.');
+  updateUI(true);
+}
+
+/* ---------- ecology ---------- */
+function counts() {
+  const c = {}; for (const k in SP) c[k] = 0;
+  for (const f of fish) if (f.state !== 'caged' && !f.dead) c[f.sp]++;
+  return c;
+}
+function record() {
+  const c = counts();
+  hist.push({ day, inv: c.perch, cic: c.cichlid });
+  if (hist.length > 240) hist.shift();
+}
+function dayTick() {
+  day++;
+  const c = counts(), m = month(), dy = day % 360;
+  if (dy === 60) log('Long rains begin. Ningu head up the rivers to spawn, and most fish breed more.');
+  if (dy === 150) log('Long rains end. Dry season.');
+  if (dy === 270) log('Short rains begin. Perch and tilapia spawning picks up.');
+  if (dy === 0) log('Short rains end. A new year starts.');
+  for (const k in SP) if (Math.random() < SP[k].imm && c[k] < SP[k].K) spawnEdge(k);
+  nests = nests.filter(n => n.until > day);
+  for (const e of eggs) if (e.hatch <= day) for (let i = 0; i < e.n; i++) fish.push(makeFish('perch', clamp(e.x + R(-10, 10), 6, 994), clamp(e.y + R(-8, 8), 108, 512), true));
+  eggs = eggs.filter(e => e.hatch > day);
+  const crowd = fish.length > 170;
+  for (const f of fish) {
+    if (f.dead) continue;
+    const B = BREED[f.sp];
+    if (f.len < f.maxLen) f.len = Math.min(f.maxLen, f.len + B.grow);
+    if (f.state === 'free' && Math.random() < (f.len < B.fry * 2 ? B.juvMort : .0008)) { f.dead = true; continue; }
+    if (f.brood > 0 && --f.brood === 0 && f.state === 'free') releaseFry(f);
+    if (f.state === 'away' && day >= f.backDay) { f.state = 'free'; f.x = 8; f.y = R(160, 460); f.wa = R(-.3, .3); f.vx = SP[f.sp].speed; releaseFry(f); }
+    if (crowd || f.state !== 'free' || f.brood > 0 || !f.female || f.len < B.mature || f.cool > day) continue;
+    // crowding slows breeding; ningu still make their yearly run, just fewer of them
+    const dens = Math.max(B.mode === 'river' ? .5 : 0, 1 - c[f.sp] / SP[f.sp].K);
+    if (Math.random() < B.rate * B.season(m) * dens) startBreeding(f, B);
+  }
+  record();
+}
+function startBreeding(f, B) {
+  f.cool = day + (B.days || 0) + B.rest;
+  if (B.mode === 'mouth') { f.brood = B.days; if (B.nest) nests.push({ x: f.x, until: day + 5 }); }
+  else if (B.mode === 'broadcast') {
+    eggs.push({ x: f.x, y: f.y, hatch: day + B.hatch, n: B.clutch[0] + Math.floor(Math.random() * (B.clutch[1] - B.clutch[0] + 1)) });
+    for (let i = 0; i < 24; i++) parts.push({ x: f.x + R(-6, 6), y: f.y + R(-4, 4), vx: R(-8, 8), vy: -R(2, 8), life: R(2, 4), max: 4, kind: 'egg' });
+  } else if (B.mode === 'river') f.state = 'river';
+}
+function releaseFry(f) {
+  const [a, b] = BREED[f.sp].clutch, n = a + Math.floor(Math.random() * (b - a + 1));
+  for (let i = 0; i < n; i++) fish.push(makeFish(f.sp, clamp(f.x + R(-10, 10), 6, 994), clamp(f.y + R(-8, 8), 108, 512), true));
+  for (let i = 0; i < 6; i++) parts.push({ x: f.x, y: f.y, vx: R(-15, 15), vy: R(-10, 5), life: 1, max: 1, kind: 'egg' });
+}
+
+/* ---------- fish movement ---------- */
+function updateFish(f, dt) {
+  const s = SP[f.sp];
+  f.wob += dt * (7 + Math.hypot(f.vx, f.vy) * .12);
+  if (f.state === 'trap' || f.state === 'away') return;
+  if (f.state === 'caged') {
+    f.wa += R(-1, 1) * dt * 2;
+    const tvx = Math.cos(f.wa) * s.speed * .45, tvy = Math.sin(f.wa) * s.speed * .3;
+    f.vx += (tvx - f.vx) * dt * 2; f.vy += (tvy - f.vy) * dt * 2;
+    f.x += f.vx * dt; f.y += f.vy * dt;
+    const m = f.len * .45;
+    if (f.x < CAGE_IN.x + m) { f.x = CAGE_IN.x + m; f.wa = R(-.5, .5); }
+    if (f.x > CAGE_IN.x + CAGE_IN.w - m) { f.x = CAGE_IN.x + CAGE_IN.w - m; f.wa = Math.PI + R(-.5, .5); }
+    if (f.y < CAGE_IN.y + 6) { f.y = CAGE_IN.y + 6; f.vy = Math.abs(f.vy); }
+    if (f.y > CAGE_IN.y + CAGE_IN.h - 6) { f.y = CAGE_IN.y + CAGE_IN.h - 6; f.vy = -Math.abs(f.vy); }
+    orient(f, dt); return;
+  }
+  let tvx, tvy;
+  if (f.state === 'approach') {
+    const dx = ENTRY.x - f.x, dy = ENTRY.y - f.y, d = Math.hypot(dx, dy) || 1;
+    tvx = dx / d * s.speed * 1.6; tvy = dy / d * s.speed * 1.6;
+  } else {
+    f.wa += R(-1, 1) * dt * 1.8;
+    if (f.x < 30) f.wa = R(-.4, .4); else if (f.x > 970) f.wa = Math.PI + R(-.4, .4);
+    tvx = Math.cos(f.wa) * s.speed; tvy = Math.sin(f.wa) * s.speed * .42;
+    if (f.y < 108) tvy += 26; if (f.y > 512) tvy -= 26;
+    if (f.sp === 'perch') {
+      f.hunger -= dt;
+      if (f.hunger <= 0) {
+        if (!f.prey || f.prey.dead || f.prey.state !== 'free') f.prey = nearestPrey(f, 150);
+        if (f.prey) {
+          const dx = f.prey.x - f.x, dy = f.prey.y - f.y, d = Math.hypot(dx, dy) || 1;
+          tvx = dx / d * s.speed * 1.75; tvy = dy / d * s.speed * 1.75;
+          if (d < f.len * .42) eat(f, f.prey);
+        }
+      }
+    } else {
+      for (const p of fish) {
+        if (p.sp !== 'perch' || p.state !== 'free' || p.hunger > 0 || f.len > p.len * .58) continue;
+        const dx = f.x - p.x, dy = f.y - p.y, d = Math.hypot(dx, dy);
+        if (d < 80 && d > 0) { tvx += dx / d * s.speed * 1.5; tvy += dy / d * s.speed * 1.2; }
+      }
+    }
+  }
+  // ningu heading for the river mouth on the left; fish east of the trap pass under the cage
+  if (f.state === 'river') { tvx = -s.speed * 1.3; tvy = ((f.x > 300 ? 500 : 300) - f.y) * .3; }
+  if (f.brood > 0) { tvx *= .6; tvy *= .6; }
+  const k = Math.min(1, dt * 2.2);
+  f.vx += (tvx - f.vx) * k; f.vy += (tvy - f.vy) * k;
+  f.x += f.vx * dt; f.y += f.vy * dt;
+  if (f.state === 'free' || f.state === 'river') {
+    const m = 6 + f.len * .3;
+    for (const r of OBS) if (inRect(r, f.x, f.y, m)) pushOut(f, r, m);
+    if (f.state === 'river' && f.x < 8) { f.state = 'away'; f.backDay = day + BREED[f.sp].days; return; }
+    f.y = clamp(f.y, 104, 520); f.x = clamp(f.x, 4, 996);
+  }
+  orient(f, dt);
+}
+function orient(f, dt) {
+  if (Math.abs(f.vx) > 3) f.face = Math.sign(f.vx);
+  const target = clamp(Math.atan2(f.vy, Math.abs(f.vx) + 1), -.45, .45);
+  f.tilt += (target - f.tilt) * Math.min(1, dt * 5);
+}
+function pushOut(f, r, m) {
+  const dl = f.x - (r.x - m), dr = r.x + r.w + m - f.x, dt = f.y - (r.y - m), db = r.y + r.h + m - f.y;
+  const mn = Math.min(dl, dr, dt, db);
+  if (mn === dl) { f.x = r.x - m; f.vx = -Math.abs(f.vx); f.wa = Math.PI + R(-.6, .6); }
+  else if (mn === dr) { f.x = r.x + r.w + m; f.vx = Math.abs(f.vx); f.wa = R(-.6, .6); }
+  else if (mn === db) { f.y = r.y + r.h + m; f.vy = Math.abs(f.vy); }
+  else { f.y = r.y - m; f.vy = -Math.abs(f.vy); }
+}
+function nearestPrey(f, range) {
+  let best = null, bd = range;
+  for (const p of fish) {
+    if (p === f || p.dead || p.state !== 'free' || (p.sp === 'perch' && p.len > 24) || p.len > f.len * .58) continue;
+    const d = Math.hypot(p.x - f.x, p.y - f.y);
+    if (d < bd) { bd = d; best = p; }
+  }
+  return best;
+}
+function eat(f, p) {
+  p.dead = true; f.prey = null; f.hunger = R(60, 100);
+  if (p.sp === 'perch') stats.cannibal++; else stats.eaten++;
+  for (let i = 0; i < 9; i++) parts.push({ x: p.x, y: p.y, vx: R(-30, 30), vy: R(-30, 20), life: R(.5, 1), max: 1, kind: 'bit', c: SP[p.sp].body });
+}
+
+/* ---------- trap controller ---------- */
+function go(state) { trap.state = state; trap.t = 0; trap.tw = null; trap.flag = false; }
+function tween(f, x, y, d) { trap.tw = { x0: f.x, y0: f.y, x1: x, y1: y, d, k: 0 }; }
+function stepTween(f, dt) {
+  const tw = trap.tw; tw.k = Math.min(1, tw.k + dt / tw.d);
+  const e = ease(tw.k);
+  f.x = tw.x0 + (tw.x1 - tw.x0) * e; f.y = tw.y0 + (tw.y1 - tw.y0) * e;
+  f.vx = (tw.x1 - tw.x0) / tw.d; f.vy = (tw.y1 - tw.y0) / tw.d;
+  return tw.k >= 1;
+}
+function updateTrap(dt) {
+  const T = trap, I = T.inf, G = T.goal, f = T.fish;
+  for (const k in I) I[k] += clamp(G[k] - I[k], -dt * 2.6, dt * 2.6);
+  T.t += dt;
+  switch (T.state) {
+    case 'idle': {
+      Object.assign(G, { entry: 1, gateL: 0, gateR: 0, bottom: 1, pusher: 0 });
+      if (!opts.trapOn || cagedCount() >= CAP) break;
+      for (const c of fish) {
+        if (c.state !== 'free' || c.dead || c.len < 12 || c.x < 40 || c.x > 318) continue;
+        // Nile perch only go for the frozen white tilapia bait; other fish wander in toward the light
+        const bp = opts.bait ? baitFresh : 0, perch = c.sp === 'perch';
+        if (Math.hypot(c.x - ENTRY.x, c.y - ENTRY.y) > (perch ? 220 + 200 * bp : 220)) continue;
+        if (Math.random() < dt * (perch ? .06 + 2.6 * bp : .3)) { T.fish = c; c.state = 'approach'; c.prey = null; go('approach'); break; }
+      }
+      break;
+    }
+    case 'approach':
+      if (!f || f.dead) { T.fish = null; go('idle'); break; }
+      if (T.t > 10) { f.state = 'free'; T.fish = null; go('idle'); break; }
+      if (Math.hypot(f.x - ENTRY.x, f.y - ENTRY.y) < 6) { f.state = 'trap'; G.entry = 0; go('enter'); }
+      break;
+    case 'enter':
+      if (!T.tw) { f.x += (ENTRY.x - f.x) * .1; if (I.entry < .3) tween(f, SCAN_X, TCY, 1.1); }
+      else if (stepTween(f, dt)) { G.entry = 1; go('scan'); }
+      break;
+    case 'scan':
+      f.y = TCY + Math.sin(T.t * 5) * 1.5; f.vx = 4;
+      if (T.t > .75 && !T.flag) { T.flag = true; classify(f); }
+      if (T.t > 1.5) go(T.label.trap ? 'close' : 'pass');
+      break;
+    case 'close':
+      G.gateL = 1; G.gateR = 1;
+      if (!T.tw && !T.flag && T.t > .55) { T.flag = true; tween(f, DROP_X, TCY, .6); }
+      else if (T.tw && stepTween(f, dt)) { G.bottom = 0; go('drop'); }
+      break;
+    case 'drop':
+      if (!T.tw && !T.flag && I.bottom < .15) { T.flag = true; G.pusher = 1; tween(f, DROP_X + 6, 214, .95); }
+      else if (T.tw) {
+        f.tilt = .5 * Math.min(1, T.tw.k * 2);
+        if (stepTween(f, dt)) {
+          f.state = 'caged'; f.wa = R(0, 6.28); f.vx = 0; f.vy = 0;
+          if (isTarget(f.sp)) { stats.tp++; log(`<b>${SP[f.sp].name}</b> pushed into the cage.`, 'inv'); }
+          else { stats.fp++; log(`<b>${SP[f.sp].name}</b> trapped by mistake.`, 'inv'); }
+          Object.assign(G, { pusher: 0, bottom: 1, gateL: 0, gateR: 0 });
+          go('reset');
+        }
+      }
+      break;
+    case 'pass':
+      if (!T.tw) tween(f, EXIT_X, TCY, 1.5);
+      else if (stepTween(f, dt)) {
+        f.state = 'free'; f.wa = R(-.2, .2); f.vx = SP[f.sp].speed;
+        if (isTarget(f.sp)) { stats.fn++; log(`<b>${SP[f.sp].name}</b> slipped through.`, 'inv'); }
+        else { stats.tn++; log(`<b>${SP[f.sp].name}</b> swam out safely.`, 'nat'); }
+        go('reset');
+      }
+      break;
+    case 'reset':
+      if (T.t > .9) { T.fish = null; T.label = null; go('idle'); }
+      break;
+  }
+}
+function classify(f) {
+  const actual = isTarget(f.sp), correct = Math.random() < opts.acc, decide = correct ? actual : !actual;
+  let sp = f.sp;
+  if (!correct) sp = decide ? (f.len > 30 ? 'perch' : 'tilapia') : (f.len > 28 ? (Math.random() < .5 ? 'ngege' : 'ningu') : 'cichlid');
+  if (!correct && decide && !isTarget(sp)) sp = 'perch';
+  const conf = correct ? R(.86, .99) : R(.55, .8);
+  trap.label = { sp, conf, trap: decide };
+}
+const cagedCount = () => fish.filter(f => f.state === 'caged').length;
+function harvest() {
+  const caged = fish.filter(f => f.state === 'caged');
+  if (!caged.length) return;
+  let kg = 0, inv = 0, back = 0;
+  for (const f of caged) {
+    if (SP[f.sp].inv) { kg += kgOf(f); inv++; f.dead = true; }
+    else { back++; f.state = 'free'; f.x = R(660, 760); f.y = R(200, 440); f.wa = R(-.3, .3); }
+  }
+  stats.kg += kg; stats.perchOut += inv;
+  if (opts.bait) baitFresh = 1;
+  log(`Cage emptied: <b>${inv} invasive</b> fish landed (${Math.round(kg)} kg)${back ? `, ${back} native returned` : ''}.${opts.bait ? ' Fresh frozen tilapia loaded.' : ''}`);
+}
+
+/* ---------- loop ---------- */
+function update(dt) {
+  t += dt; dayAcc += dt;
+  if (dayAcc >= DAY) { dayAcc -= DAY; dayTick(); }
+  if (opts.bait) {
+    baitFresh = Math.max(0, baitFresh - dt / (DAY * 30));
+    if (opts.auto && baitFresh < .05) { baitFresh = 1; log('Fisherfolk swapped in fresh frozen tilapia.'); }
+    if (Math.random() < dt * 3 * baitFresh) parts.push({ x: TUBE.x - 2, y: TCY + R(-14, 14), vx: -R(12, 22), vy: R(-3, 3), life: R(3, 5), max: 5, kind: 'scent', r: R(1, 2) });
+  }
+  for (const f of fish) if (!f.dead) updateFish(f, dt);
+  updateTrap(dt);
+  if (fish.some(f => f.dead)) fish = fish.filter(f => !f.dead);
+  if (opts.auto && cagedCount() >= CAP && trap.state === 'idle') {
+    harvestTimer += dt; if (harvestTimer > 2.5) { harvestTimer = 0; harvest(); }
+  } else harvestTimer = 0;
+  if (Math.random() < dt * 2.2) parts.push({ x: R(20, 980), y: BED - 4, vx: 0, vy: -R(14, 26), life: 6, max: 6, kind: 'bub', r: R(1, 2.6) });
+  for (const p of parts) { p.x += p.vx * dt + (p.kind === 'bub' ? Math.sin(t * 3 + p.y * .05) * .2 : 0); p.y += p.vy * dt; p.life -= dt; if (p.kind === 'bit') p.vy += 20 * dt; }
+  parts = parts.filter(p => p.life > 0 && p.y > SURF);
+}
+
+const cv = $('lake'), ctx = cv.getContext('2d');
+let dpr = 1, sc = 1;
+function resize() {
+  const w = cv.clientWidth || 800; dpr = Math.min(2, window.devicePixelRatio || 1); sc = w / W;
+  cv.width = Math.round(w * dpr); cv.height = Math.round(w * H / W * dpr);
+}
+new ResizeObserver(resize).observe(cv); resize();
+
+let last = performance.now(), uiAcc = 0;
+function frame(now) {
+  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  if (running) {
+    const sim = dt * speed, n = Math.ceil(sim / .02);
+    for (let i = 0; i < n; i++) update(sim / n);
+  }
+  render();
+  uiAcc += dt; if (uiAcc > .25) { uiAcc = 0; updateUI(); }
+  requestAnimationFrame(frame);
+}
+
+/* ---------- drawing ---------- */
+function render() {
+  ctx.setTransform(dpr * sc, 0, 0, dpr * sc, 0, 0);
+  drawBackdrop();
+  for (const n of nests) {
+    ctx.fillStyle = 'rgba(20,18,8,.5)'; ctx.beginPath(); ctx.ellipse(n.x, BED + 1, 13, 3.5, 0, 0, 7); ctx.fill();
+    ctx.strokeStyle = 'rgba(200,180,120,.65)'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.ellipse(n.x, BED - 1, 15, 4, 0, Math.PI, 2 * Math.PI); ctx.stroke();
+  }
+  drawCage();
+  for (const f of fish) if (f.state === 'caged') drawFish(f);
+  drawNetFront();
+  for (const f of fish) if (f.state === 'free' || f.state === 'approach' || f.state === 'river') drawFish(f);
+  drawTubeBack();
+  if (opts.bait) drawBait();
+  if (trap.fish && trap.fish.state === 'trap') drawFish(trap.fish);
+  drawBalloons();
+  drawTubeFront();
+  drawCamera();
+  for (const p of parts) {
+    ctx.globalAlpha = Math.min(1, p.life / p.max * 2);
+    if (p.kind === 'bub') { ctx.strokeStyle = 'rgba(220,245,240,.55)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.stroke(); }
+    else if (p.kind === 'egg') { ctx.fillStyle = 'rgba(255,250,215,.85)'; ctx.beginPath(); ctx.arc(p.x, p.y, 1.1, 0, 7); ctx.fill(); }
+    else if (p.kind === 'scent') { ctx.fillStyle = 'rgba(245,250,255,.45)'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); }
+    else { ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(p.x, p.y, 1.8, 0, 7); ctx.fill(); }
+  }
+  ctx.globalAlpha = 1;
+  drawSurface();
+  drawLabels();
+}
+function drawBackdrop() {
+  const wet = rainy(month());
+  let g = ctx.createLinearGradient(0, 0, 0, SURF);
+  g.addColorStop(0, wet ? '#8d9ea6' : '#9fcfdc'); g.addColorStop(1, wet ? '#c9ccc0' : '#e8e4c9');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, SURF);
+  if (!wet) { ctx.fillStyle = 'rgba(255,240,190,.9)'; ctx.beginPath(); ctx.arc(860, 26, 13, 0, 7); ctx.fill(); }
+  else {
+    ctx.strokeStyle = 'rgba(235,242,245,.55)'; ctx.lineWidth = 1; ctx.beginPath();
+    for (let i = 0; i < 70; i++) { const x = (i * 97 + t * 160) % W, y = (i * 37 + t * 300) % SURF; ctx.moveTo(x, y); ctx.lineTo(x - 3, y + 8); }
+    ctx.stroke();
+  }
+  // far shore with papyrus
+  ctx.fillStyle = '#5c7a4a';
+  ctx.beginPath(); ctx.moveTo(0, SURF); ctx.lineTo(0, 54); ctx.quadraticCurveTo(140, 44, 260, 56); ctx.quadraticCurveTo(320, 60, 360, SURF); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(760, SURF); ctx.quadraticCurveTo(860, 50, 1000, 52); ctx.lineTo(1000, SURF); ctx.fill();
+  ctx.strokeStyle = '#47653a'; ctx.lineWidth = 1.4;
+  for (let i = 0; i < 22; i++) {
+    const x = 10 + i * 13 + (i % 3) * 3, top = 30 + (i * 37 % 14);
+    ctx.beginPath(); ctx.moveTo(x, 58); ctx.quadraticCurveTo(x + 2, (58 + top) / 2, x + (i % 2 ? 3 : -3), top); ctx.stroke();
+    ctx.fillStyle = '#4f6e40'; ctx.beginPath(); ctx.arc(x + (i % 2 ? 3 : -3), top, 3.4, 0, 7); ctx.fill();
+  }
+  g = ctx.createLinearGradient(0, SURF, 0, H);
+  g.addColorStop(0, '#2f8a7e'); g.addColorStop(.45, '#1d5f58'); g.addColorStop(1, '#0e3532');
+  ctx.fillStyle = g; ctx.fillRect(0, SURF, W, H - SURF);
+  // light shafts
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 6; i++) {
+    const x = 90 + i * 170 + Math.sin(t * .3 + i) * 20;
+    const gr = ctx.createLinearGradient(0, SURF, 0, 420);
+    gr.addColorStop(0, 'rgba(180,240,210,.10)'); gr.addColorStop(1, 'rgba(180,240,210,0)');
+    ctx.fillStyle = gr; ctx.beginPath(); ctx.moveTo(x, SURF); ctx.lineTo(x + 40, SURF); ctx.lineTo(x + 110, 420); ctx.lineTo(x + 30, 420); ctx.fill();
+  }
+  ctx.restore();
+  // lakebed
+  ctx.fillStyle = '#3a3a26';
+  ctx.beginPath(); ctx.moveTo(0, H);
+  for (let x = 0; x <= W; x += 40) ctx.lineTo(x, BED + Math.sin(x * .02) * 5 + Math.sin(x * .07) * 2);
+  ctx.lineTo(W, H); ctx.fill();
+  ctx.strokeStyle = 'rgba(70,110,60,.75)'; ctx.lineWidth = 2;
+  for (let i = 0; i < 26; i++) {
+    const x = 18 + i * 38 + (i * 17 % 11); if (x > 360 && x < 660) continue;
+    const hgt = 18 + (i * 29 % 22), sw = Math.sin(t * 1.2 + i) * 5;
+    ctx.beginPath(); ctx.moveTo(x, BED + 4); ctx.quadraticCurveTo(x + sw, BED - hgt / 2, x + sw * 1.6, BED - hgt); ctx.stroke();
+  }
+}
+function drawCage() {
+  const cx = CAGE.x + CAGE.w / 2, rx = CAGE.w / 2, top = CAGE.y, bot = CAGE.y + CAGE.h;
+  ctx.strokeStyle = 'rgba(210,225,215,.35)'; ctx.lineWidth = 1;
+  for (const [x0, x1] of [[CAGE.x + 10, 330], [CAGE.x + CAGE.w - 10, 690]]) { ctx.beginPath(); ctx.moveTo(x0, bot); ctx.lineTo(x1, BED + 2); ctx.stroke(); }
+  ctx.fillStyle = 'rgba(8,30,30,.28)'; ctx.fillRect(CAGE.x, top, CAGE.w, CAGE.h);
+  ctx.strokeStyle = 'rgba(215,230,220,.13)';
+  for (let y = top + 20; y < bot; y += 20) { ctx.beginPath(); ctx.ellipse(cx, y, rx, 12, 0, Math.PI, 2 * Math.PI); ctx.stroke(); }
+}
+function drawNetFront() {
+  const cx = CAGE.x + CAGE.w / 2, rx = CAGE.w / 2, top = CAGE.y, bot = CAGE.y + CAGE.h;
+  ctx.strokeStyle = 'rgba(225,238,228,.26)'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 20; i++) { const x = cx - rx * Math.cos(Math.PI * i / 20); ctx.beginPath(); ctx.moveTo(x, top + 4); ctx.lineTo(x, bot + 4); ctx.stroke(); }
+  for (let y = top + 20; y <= bot; y += 20) { ctx.beginPath(); ctx.ellipse(cx, y, rx, 12, 0, 0, Math.PI); ctx.stroke(); }
+  ctx.strokeStyle = 'rgba(230,240,232,.55)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(cx, bot, rx, 12, 0, 0, 2 * Math.PI); ctx.stroke();
+  ctx.strokeStyle = '#2f3533'; ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.ellipse(cx, top, rx + 4, 12, 0, 0, 2 * Math.PI); ctx.stroke();
+  ctx.strokeStyle = '#8c6a40'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(cx, top, rx + 4, 12, 0, 0, Math.PI); ctx.stroke();
+  // chute from trapdoor
+  ctx.fillStyle = 'rgba(200,230,240,.12)'; ctx.fillRect(DROP_X - 24, TUBE.y + TUBE.h, 48, 18);
+}
+function drawTubeBack() {
+  ctx.fillStyle = 'rgba(205,235,245,.13)';
+  ctx.fillRect(TUBE.x, TUBE.y, TUBE.w, TUBE.h);
+  ctx.strokeStyle = 'rgba(205,235,245,.35)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.ellipse(TUBE.x, TCY, 9, TUBE.h / 2, 0, 0, 7); ctx.stroke();
+  // lure light at the entrance
+  const a = opts.trapOn && trap.state === 'idle' && cagedCount() < CAP ? .35 + Math.sin(t * 3) * .12 : .06;
+  const g = ctx.createRadialGradient(TUBE.x - 4, TCY, 2, TUBE.x - 4, TCY, 70);
+  g.addColorStop(0, `rgba(255,235,160,${a})`); g.addColorStop(1, 'rgba(255,235,160,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(TUBE.x - 4, TCY, 70, 0, 7); ctx.fill();
+}
+function drawTubeFront() {
+  const bY = TUBE.y + TUBE.h;
+  ctx.strokeStyle = 'rgba(235,248,252,.75)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(TUBE.x, TUBE.y); ctx.lineTo(TUBE.x + TUBE.w, TUBE.y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(TUBE.x, bY); ctx.lineTo(DROP_X - 24, bY); ctx.moveTo(DROP_X + 24, bY); ctx.lineTo(TUBE.x + TUBE.w, bY); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,.28)'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(TUBE.x + 12, TUBE.y + 7); ctx.lineTo(TUBE.x + TUBE.w - 12, TUBE.y + 7); ctx.stroke();
+  ctx.strokeStyle = '#8f8fe0'; ctx.lineWidth = 3.5;
+  ctx.beginPath(); ctx.ellipse(TUBE.x + TUBE.w, TCY, 9, TUBE.h / 2, 0, 0, 7); ctx.stroke();
+  ctx.strokeStyle = 'rgba(235,248,252,.7)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.ellipse(TUBE.x, TCY, 9, TUBE.h / 2, 0, -Math.PI / 2, Math.PI / 2); ctx.stroke();
+  // posts down to collar
+  ctx.strokeStyle = '#1d2321'; ctx.lineWidth = 4;
+  for (const x of [415, 610]) { ctx.beginPath(); ctx.moveTo(x, bY); ctx.lineTo(x, CAGE.y + 8); ctx.stroke(); }
+}
+function balloonPath(x, y, rx, ry) { ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, 7); }
+function shadeBalloon(x, y, rx, ry) {
+  const g = ctx.createRadialGradient(x - rx * .35, y - ry * .35, 1, x, y, Math.max(rx, ry));
+  g.addColorStop(0, '#ffd2e6'); g.addColorStop(.35, '#f48bbb'); g.addColorStop(1, '#d4568f');
+  ctx.fillStyle = g; balloonPath(x, y, rx, ry); ctx.fill();
+}
+function drawBalloons() {
+  const I = trap.inf, top = TUBE.y + 2, bot = TUBE.y + TUBE.h - 2;
+  // entrance balloon, rises from the floor
+  let r = 5 + 21 * I.entry; shadeBalloon(ENTRY.x + 44, bot - r * 1.1, r * .85, r * 1.1);
+  knot(ENTRY.x + 44, bot, 1);
+  // gate balloons hang from the roof
+  for (const [x, v] of [[392, I.gateL], [650, I.gateR]]) { r = 5 + 21 * v; shadeBalloon(x, top + r * 1.15, r * .85, r * 1.15); knot(x, top, -1); }
+  // pusher: a cone from the roof
+  const len = 8 + 48 * I.pusher, wdt = 9 + 15 * I.pusher;
+  const g = ctx.createLinearGradient(DROP_X - wdt, 0, DROP_X + wdt, 0);
+  g.addColorStop(0, '#f8a9cb'); g.addColorStop(1, '#d4568f');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(DROP_X - wdt, top); ctx.quadraticCurveTo(DROP_X - wdt * .6, top + len * .7, DROP_X, top + len);
+  ctx.quadraticCurveTo(DROP_X + wdt * .6, top + len * .7, DROP_X + wdt, top); ctx.closePath(); ctx.fill();
+  // floor balloon over the trapdoor
+  const ry = 2 + 8 * I.bottom, rx = 6 + 22 * I.bottom;
+  shadeBalloon(DROP_X, bot - ry * .4, rx, ry);
+  if (trap.state === 'pass') { ctx.strokeStyle = `rgba(120,240,170,${.5 + Math.sin(t * 10) * .3})`; ctx.lineWidth = 2; balloonPath(DROP_X, bot - ry * .4, rx + 3, ry + 3); ctx.stroke(); }
+}
+function knot(x, y, dir) { ctx.fillStyle = '#c24781'; ctx.beginPath(); ctx.moveTo(x - 3, y); ctx.lineTo(x + 3, y); ctx.lineTo(x, y - 5 * dir); ctx.fill(); }
+function drawCamera() {
+  ctx.strokeStyle = '#1d2321'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(CAM.x + 26, CAM.y + 4); ctx.lineTo(CAM.x + 26, TUBE.y); ctx.stroke();
+  const scanning = trap.state === 'scan';
+  if (scanning || trap.label) {
+    const f = trap.fish, c = trap.label ? (trap.label.trap ? '239,110,70' : '76,200,140') : '170,230,255';
+    if (scanning) {
+      ctx.fillStyle = `rgba(${c},.14)`; ctx.beginPath(); ctx.moveTo(CAM.x - 6, CAM.y + 14); ctx.lineTo(CAM.x + 6, CAM.y + 14);
+      ctx.lineTo(SCAN_X + 50, TUBE.y + TUBE.h); ctx.lineTo(SCAN_X - 50, TUBE.y + TUBE.h); ctx.fill();
+      const sy = TUBE.y + ((t * 90) % TUBE.h);
+      ctx.strokeStyle = `rgba(${c},.7)`; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(SCAN_X - 40, sy); ctx.lineTo(SCAN_X + 40, sy); ctx.stroke();
+    }
+    if (f && f.state === 'trap') {
+      const hw = f.len * .62, hh = Math.max(9, f.len * SP[f.sp].h * .75);
+      ctx.strokeStyle = `rgb(${c})`; ctx.lineWidth = 2;
+      for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+        const x = f.x + sx * hw, y = f.y + sy * hh;
+        ctx.beginPath(); ctx.moveTo(x - sx * 7, y); ctx.lineTo(x, y); ctx.lineTo(x, y - sy * 7); ctx.stroke();
+      }
+    }
+    if (trap.label) {
+      const L = trap.label, s = SP[L.sp];
+      const a = `${s.name.toUpperCase()} · ${Math.round(L.conf * 100)}%`;
+      const b = L.trap ? 'INVASIVE → TRAP' : (s.inv ? 'NOT TARGETED → PASS' : 'NATIVE → PASS');
+      ctx.font = '600 11px "IBM Plex Mono", Menlo, monospace';
+      const w = Math.max(ctx.measureText(a).width, ctx.measureText(b).width) + 18;
+      const x = CAM.x + 40, y = 6;
+      ctx.fillStyle = L.trap ? 'rgba(170,58,32,.95)' : 'rgba(22,112,72,.95)';
+      roundRect(x, y, w, 38, 6); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.fillText(a, x + 9, y + 16); ctx.globalAlpha = .85; ctx.fillText(b, x + 9, y + 31); ctx.globalAlpha = 1;
+    }
+  }
+  // camera body (like a security camera)
+  ctx.save(); ctx.translate(CAM.x, CAM.y);
+  ctx.fillStyle = '#20262a'; roundRect(-18, -14, 50, 22, 9); ctx.fill();
+  ctx.fillStyle = '#2d3439'; roundRect(-2, -20, 16, 8, 3); ctx.fill();
+  ctx.fillStyle = '#0d1114'; ctx.beginPath(); ctx.arc(0, 8, 10, 0, 7); ctx.fill();
+  ctx.strokeStyle = scanning ? `rgba(140,170,255,${.6 + Math.sin(t * 14) * .4})` : '#6f7fe8'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(0, 8, 9, 0, 7); ctx.stroke();
+  ctx.fillStyle = '#4b5fd0'; ctx.beginPath(); ctx.arc(0, 8, 4, 0, 7); ctx.fill();
+  ctx.restore();
+}
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function drawSurface() {
+  ctx.fillStyle = 'rgba(200,240,235,.18)';
+  ctx.beginPath(); ctx.moveTo(0, SURF - 2);
+  for (let x = 0; x <= W; x += 20) ctx.lineTo(x, SURF + Math.sin(x * .03 + t * 1.6) * 2);
+  ctx.lineTo(W, SURF + 8); ctx.lineTo(0, SURF + 8); ctx.fill();
+  ctx.strokeStyle = 'rgba(240,255,250,.6)'; ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  for (let x = 0; x <= W; x += 20) { const y = SURF + Math.sin(x * .03 + t * 1.6) * 2; x ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+  ctx.stroke();
+}
+function drawLabels() {
+  const m = month();
+  ctx.font = '600 11px "IBM Plex Mono", Menlo, monospace'; ctx.fillStyle = 'rgba(15,35,35,.78)';
+  ctx.fillText(`${MONTHS[m].toUpperCase()} · ${LONG_RAINS(m) ? 'LONG RAINS' : SHORT_RAINS(m) ? 'SHORT RAINS' : 'DRY SEASON'}`, 10, 16);
+  if (fish.some(f => f.state === 'river' || f.state === 'away')) {
+    ctx.font = '600 10.5px "IBM Plex Mono", Menlo, monospace'; ctx.fillStyle = 'rgba(230,245,240,.85)';
+    ctx.fillText('◀ TO RIVER · NINGU SPAWNING RUN', 10, 300);
+  }
+  ctx.font = '600 10.5px "IBM Plex Mono", Menlo, monospace'; ctx.fillStyle = 'rgba(230,245,240,.75)';
+  ctx.fillText('AI CAMERA', CAM.x - 66, CAM.y + 2);
+  ctx.fillText('ENTRANCE', TUBE.x - 74, TUBE.y - 6 + 28 - 34);
+  ctx.fillText('EXIT', TUBE.x + TUBE.w + 16, TUBE.y + 4);
+  const n = cagedCount();
+  ctx.fillStyle = n >= CAP ? 'rgba(255,180,150,.95)' : 'rgba(230,245,240,.75)';
+  ctx.fillText(`HOLDING CAGE ${n}/${CAP}${n >= CAP ? ' · FULL' : ''}`, CAGE.x + 8, CAGE.y + CAGE.h + 30);
+  if (opts.bait) { ctx.fillStyle = 'rgba(230,245,240,.75)'; ctx.fillText('FROZEN TILAPIA BAIT', 548, TUBE.y - 6); }
+  if (!opts.trapOn) { ctx.fillStyle = 'rgba(255,210,120,.95)'; ctx.fillText('TRAP OFF', TUBE.x + 150, TUBE.y - 8); }
+}
+const BAIT = { x: 604, y: TUBE.y + TUBE.h - 10, len: 34, face: -1, tilt: .06, wob: 0, sp: 'bait' };
+const BAIT_LOOK = { h: .43, top: '#d3d9dd', body: '#eef2f4', belly: '#ffffff', fin: '#c4ccd1', bars: 'rgba(140,160,175,.2)', eye: '#9aa6ad' };
+function drawBait() {
+  ctx.globalAlpha = .45 + .55 * baitFresh;
+  drawFish(BAIT, BAIT_LOOK);
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = 'rgba(220,235,240,.45)'; ctx.lineWidth = 1; ctx.setLineDash([2, 3]);
+  ctx.strokeRect(BAIT.x - 22, BAIT.y - 13, 44, 22); ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(255,255,255,.95)';
+  for (let i = 0; i < 6; i++) {
+    if (Math.sin(t * 2 + i * 1.7) * baitFresh < .45) continue;
+    const x = BAIT.x + (i - 2.5) * 5, y = BAIT.y + (i * 7 % 9) - 5;
+    ctx.fillRect(x - 2, y - .5, 4, 1); ctx.fillRect(x - .5, y - 2, 1, 4);
+  }
+}
+function drawFish(f, s = SP[f.sp]) {
+  const L = f.len, Hh = L * s.h, sw = Math.sin(f.wob) * .22;
+  ctx.save(); ctx.translate(f.x, f.y); ctx.scale(f.face, 1); ctx.rotate(f.tilt);
+  ctx.fillStyle = s.fin;
+  ctx.beginPath(); ctx.moveTo(-L * .4, 0); ctx.lineTo(-L * .62, -Hh * .5 + sw * Hh); ctx.lineTo(-L * .55, sw * Hh * .4); ctx.lineTo(-L * .62, Hh * .5 + sw * Hh); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-L * .28, -Hh * .3); ctx.quadraticCurveTo(-L * .05, -Hh * .95, L * .16, -Hh * .38); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-L * .2, Hh * .3); ctx.quadraticCurveTo(-L * .08, Hh * .7, L * .05, Hh * .35); ctx.fill();
+  const g = ctx.createLinearGradient(0, -Hh / 2, 0, Hh / 2);
+  g.addColorStop(0, s.top); g.addColorStop(.5, s.body); g.addColorStop(1, s.belly);
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.moveTo(L * .5, Hh * .04);
+  ctx.bezierCurveTo(L * .46, -Hh * .5, f.sp === 'perch' ? L * .05 : -L * .15, -Hh * .66, -L * .44, -Hh * .12);
+  ctx.lineTo(-L * .44, Hh * .12);
+  ctx.bezierCurveTo(-L * .2, Hh * .6, L * .42, Hh * .52, L * .5, Hh * .04);
+  ctx.closePath(); ctx.fill();
+  if (s.bars) {
+    ctx.save(); ctx.clip(); ctx.fillStyle = s.bars;
+    for (let i = -2; i <= 2; i++) ctx.fillRect(i * L * .14 - L * .025, -Hh, L * .05, Hh * 2);
+    ctx.restore();
+  }
+  if (f.sp === 'cichlid') { ctx.fillStyle = 'rgba(40,110,190,.55)'; ctx.beginPath(); ctx.ellipse(L * .33, -Hh * .05, L * .16, Hh * .38, 0, 0, 7); ctx.fill(); }
+  if (f.brood > 0) { ctx.fillStyle = s.belly; ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = .8; ctx.beginPath(); ctx.ellipse(L * .3, Hh * .3, L * .13, Hh * .26, 0, 0, 7); ctx.fill(); ctx.stroke(); }
+  const er = Math.max(1.4, L * .045);
+  ctx.fillStyle = s.eye; ctx.beginPath(); ctx.arc(L * .33, -Hh * .12, er, 0, 7); ctx.fill();
+  if (f.sp === 'perch') { ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(L * .335, -Hh * .12, er * .55, 0, 7); ctx.fill(); }
+  ctx.restore();
+}
+
+/* ---------- chart ---------- */
+const ch = $('chart'), cctx = ch.getContext('2d');
+function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function drawChart() {
+  const w = ch.clientWidth, h = ch.clientHeight, d = Math.min(2, window.devicePixelRatio || 1);
+  if (ch.width !== Math.round(w * d)) { ch.width = Math.round(w * d); ch.height = Math.round(h * d); }
+  cctx.setTransform(d, 0, 0, d, 0, 0); cctx.clearRect(0, 0, w, h);
+  const pad = { l: 30, r: 34, t: 10, b: 22 }, pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
+  const max = Math.max(10, ...hist.map(p => Math.max(p.inv, p.cic)));
+  const step = max > 60 ? 20 : max > 30 ? 10 : 5, top = Math.ceil(max * 1.1 / step) * step;
+  const d0 = hist[0].day, d1 = Math.max(d0 + 20, hist[hist.length - 1].day);
+  const X = v => pad.l + (v - d0) / (d1 - d0) * pw, Y = v => pad.t + ph - v / top * ph;
+  const muted = css('--muted'), line = css('--line');
+  cctx.font = '11px "IBM Plex Mono", Menlo, monospace'; cctx.lineWidth = 1;
+  cctx.textAlign = 'right'; cctx.textBaseline = 'middle';
+  for (let v = 0; v <= top; v += step) {
+    cctx.strokeStyle = line; cctx.beginPath(); cctx.moveTo(pad.l, Y(v)); cctx.lineTo(w - pad.r, Y(v)); cctx.stroke();
+    cctx.fillStyle = muted; cctx.fillText(v, pad.l - 6, Y(v));
+  }
+  cctx.textAlign = 'center'; cctx.textBaseline = 'top';
+  const dstep = Math.max(5, Math.ceil((d1 - d0) / 6 / 5) * 5);
+  for (let v = Math.ceil(d0 / dstep) * dstep; v <= d1; v += dstep) cctx.fillText('d' + v, X(v), h - pad.b + 6);
+  cctx.fillStyle = css('--lake'); cctx.globalAlpha = .1;
+  for (let y = Math.floor(d0 / 360) * 360; y <= d1; y += 360)
+    for (const [a, b] of [[60, 150], [270, 360]]) { const x0 = X(Math.max(d0, y + a)), x1 = X(Math.min(d1, y + b)); if (x1 > x0) cctx.fillRect(x0, pad.t, x1 - x0, ph); }
+  cctx.globalAlpha = 1;
+  for (const [key, col] of [['cic', css('--gold')], ['inv', css('--invasive')]]) {
+    cctx.beginPath();
+    hist.forEach((p, i) => i ? cctx.lineTo(X(p.day), Y(p[key])) : cctx.moveTo(X(p.day), Y(p[key])));
+    cctx.strokeStyle = col; cctx.lineWidth = 2.2; cctx.lineJoin = 'round'; cctx.stroke();
+    cctx.lineTo(X(hist[hist.length - 1].day), Y(0)); cctx.lineTo(X(hist[0].day), Y(0)); cctx.closePath();
+    cctx.globalAlpha = .1; cctx.fillStyle = col; cctx.fill(); cctx.globalAlpha = 1;
+    const e = hist[hist.length - 1];
+    cctx.beginPath(); cctx.arc(X(e.day), Y(e[key]), 3.5, 0, 7); cctx.fill();
+    cctx.textAlign = 'left'; cctx.textBaseline = 'middle'; cctx.font = '600 11px "IBM Plex Mono", Menlo, monospace';
+    cctx.fillText(e[key], X(e.day) + 7, Y(e[key]));
+  }
+}
+
+/* ---------- UI ---------- */
+const logEl = $('log');
+function log(html, kind) {
+  const li = document.createElement('li');
+  li.innerHTML = `<time>Day ${day}</time><span class="${kind ? 'x-' + kind : ''}">${html}</span>`;
+  logEl.prepend(li);
+  while (logEl.children.length > 30) logEl.lastChild.remove();
+}
+const spList = $('species');
+spList.innerHTML = Object.entries(SP).map(([k, s]) =>
+  `<li><span class="dot" style="background:${s.dot}"></span><span>${s.name}<span class="kind ${s.inv ? 'inv' : 'nat'}">${s.inv ? 'invasive' : 'native'}</span><br><i>${s.latin}</i></span><span class="n" id="n-${k}">0</span></li>`).join('');
+$('seasonBar').innerHTML = MONTHS.map((m, i) => `<span class="${rainy(i) ? 'wet' : ''}" data-m="${i}" title="${m}">${m.slice(0, 3)}</span>`).join('');
+$('breedRows').innerHTML = Object.entries(SP).map(([k, s]) => {
+  const B = BREED[k];
+  return `<tr><th><span class="dot" style="background:${s.dot}"></span>${s.name}</th><td>${B.how}</td><td>${B.when}<small>Matures ${B.matures}</small></td><td class="now" id="br-${k}">—</td></tr>`;
+}).join('');
+const stepMap = { approach: 'enter', enter: 'enter', scan: 'scan', close: 'trap', drop: 'trap', pass: 'pass' };
+const statusText = { idle: 'Waiting for a fish', approach: 'A fish is heading for the lure', enter: 'Letting a fish in', scan: 'Camera is identifying the fish', close: 'Sealing the tube', drop: 'Pushing it into the cage', pass: 'Letting it swim out', reset: 'Resetting balloons' };
+function setMatrix(id, v, note) { $(id).innerHTML = `${v}<small>${note}</small>`; }
+function updateUI() {
+  const c = counts(), n = cagedCount();
+  const m = month();
+  $('day').textContent = `Day ${day} · ${MONTHS[m].slice(0, 3)}`;
+  $('season').textContent = `${MONTHS[m]} · ${LONG_RAINS(m) ? 'long rains' : SHORT_RAINS(m) ? 'short rains' : 'dry season'}`;
+  for (const el of $('seasonBar').children) el.classList.toggle('now', +el.dataset.m === m);
+  for (const k in SP) {
+    const B = BREED[k], mine = fish.filter(f => f.sp === k && !f.dead && f.state !== 'caged'), bits = [];
+    if (B.mode === 'mouth') bits.push(`${mine.filter(f => f.brood > 0).length} mothers brooding`);
+    if (B.nest) bits.push(`${nests.length} nests`);
+    if (B.mode === 'broadcast') bits.push(`${eggs.length} egg batches drifting`);
+    if (B.mode === 'river') bits.push(`${mine.filter(f => f.state === 'river' || f.state === 'away').length} gone up river`);
+    bits.push(`${mine.filter(f => f.len < B.mature).length} young`);
+    $('br-' + k).textContent = bits.join(' · ');
+  }
+  $('tPerch').textContent = c.perch;
+  $('tNative').textContent = c.cichlid + c.ngege + c.ningu;
+  $('tCage').textContent = `${n}/${CAP}`;
+  $('baitOut').textContent = opts.bait ? `${Math.round(baitFresh * 100)}%` : 'no bait';
+  $('tKg').textContent = `${Math.round(stats.kg).toLocaleString()} kg`;
+  $('eaten').textContent = `Native fish eaten by perch so far: ${stats.eaten}. Young perch eaten by adult perch: ${stats.cannibal}.`;
+  for (const k in SP) $('n-' + k).textContent = c[k];
+  setMatrix('mTP', stats.tp, 'correct'); setMatrix('mFN', stats.fn, 'missed');
+  setMatrix('mFP', stats.fp, 'caught by mistake'); setMatrix('mTN', stats.tn, 'correct');
+  const tot = stats.tp + stats.tn + stats.fp + stats.fn;
+  $('precision').textContent = tot ? `${Math.round((stats.tp + stats.tn) / tot * 100)}% right of ${tot}` : 'no fish yet';
+  const active = stepMap[trap.state];
+  for (const li of $('steps').children) li.classList.toggle('on', li.dataset.step === active);
+  let st = statusText[trap.state];
+  if (trap.state === 'idle' && !opts.trapOn) st = 'Trap is switched off';
+  else if (trap.state === 'idle' && opts.bait && baitFresh < .15) st = 'Bait has thawed, perch are losing interest';
+  else if (trap.state === 'idle' && n >= CAP) st = opts.auto ? 'Cage full, fisherfolk emptying it' : 'Cage full, empty it to keep trapping';
+  $('status').textContent = st;
+  drawChart();
+}
+
+$('play').onclick = () => { running = !running; $('play').textContent = running ? 'Pause' : 'Play'; };
+document.querySelectorAll('[data-speed]').forEach(b => b.onclick = () => {
+  speed = +b.dataset.speed;
+  document.querySelectorAll('[data-speed]').forEach(o => o.setAttribute('aria-pressed', o === b));
+});
+$('trapOn').onchange = e => { opts.trapOn = e.target.checked; log(opts.trapOn ? 'Trap switched on.' : 'Trap switched off.'); };
+$('tilapia').onchange = e => { opts.tilapia = e.target.checked; log(opts.tilapia ? 'Nile tilapia added to the target list.' : 'Only Nile perch are targeted now.'); };
+$('auto').onchange = e => { opts.auto = e.target.checked; };
+$('bait').onchange = e => { opts.bait = e.target.checked; if (opts.bait) baitFresh = 1; log(opts.bait ? 'Frozen tilapia bait put in the tube.' : 'Bait removed. Perch mostly ignore the trap now.'); updateUI(); };
+$('rebait').onclick = () => { opts.bait = true; $('bait').checked = true; baitFresh = 1; log('Fresh frozen tilapia loaded.'); updateUI(); };
+$('acc').oninput = e => { opts.acc = e.target.value / 100; $('accOut').textContent = e.target.value + '%'; };
+$('harvest').onclick = () => { harvest(); updateUI(); };
+$('invade').onclick = () => { for (let i = 0; i < 5; i++) spawnEdge('perch'); log('<b>5 Nile perch</b> swam in from the open lake.', 'inv'); updateUI(); };
+$('reset').onclick = () => init();
+
+// hover tooltip
+const tip = $('tip');
+cv.addEventListener('pointermove', e => {
+  const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / sc, y = (e.clientY - r.top) / sc;
+  let best = null, bd = 1e9;
+  for (const f of fish) { if (f.state === 'away') continue; const d = Math.hypot(f.x - x, f.y - y); if (d < Math.max(12, f.len * .55) && d < bd) { bd = d; best = f; } }
+  if (!best) { tip.hidden = true; return; }
+  const s = SP[best.sp], cm = Math.round(best.len * s.cmPerPx);
+  const where = { caged: 'In the holding cage', trap: 'Inside the trap tube', approach: 'Swimming toward the lure', river: 'Heading up river to spawn' }[best.state] || 'Free in the lake';
+  const B = BREED[best.sp];
+  const life = best.len < B.mature ? 'Young, not breeding yet' : best.brood > 0 ? `Female carrying young in her mouth (${best.brood} days left)` : `Adult ${best.female ? 'female' : 'male'}`;
+  tip.innerHTML = `<b>${s.name}</b><i>${s.latin}</i><br>About ${cm} cm · ${where}<br>${life}<br><span class="tag ${s.inv ? 'inv' : 'nat'}">${s.inv ? 'invasive' : 'native'}</span>`;
+  tip.style.left = (e.clientX - r.left) + 'px'; tip.style.top = (e.clientY - r.top) + 'px'; tip.hidden = false;
+});
+cv.addEventListener('pointerleave', () => { tip.hidden = true; });
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => drawChart());
+
+init();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
