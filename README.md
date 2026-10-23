@@ -1,2 +1,2 @@
-# lake-victoria-trap-fish-fish-fish-fish
+# lake-victoria-trap-v2
 Simulation on Lake Victoria with a trap specifically designed for nile perch.
